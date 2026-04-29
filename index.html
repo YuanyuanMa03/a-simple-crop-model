@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMPLE 作物模型 - 教学演示</title>
+
+    <!-- 引入 Chart.js 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+    <!-- 引入 KaTeX 数学公式渲染库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false});"></script>
+
+    <!-- 引入 Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===== 全局变量与基础样式 ===== */
+        :root {
+            --primary: #2e7d32;       /* 主色：深绿，代表农业 */
+            --primary-light: #4caf50;
+            --primary-dark: #1b5e20;
+            --accent: #ff8f00;        /* 强调色：琥珀，代表阳光 */
+            --bg: #fafbfc;
+            --card: #ffffff;
+            --text: #212121;
+            --text-secondary: #616161;
+            --border: #e0e0e0;
+            --code-bg: #263238;
+            --code-text: #eeffff;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ===== 导航栏 ===== */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        nav .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+        }
+
+        nav .logo {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        nav .logo span.icon { font-size: 1.4rem; }
+
+        nav .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            list-style: none;
+        }
+
+        nav .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav .nav-links a:hover { color: var(--primary); }
+
+        /* ===== 英雄区（标题页） ===== */
+        .hero {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
+            color: white;
+            padding: 5rem 2rem 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 装饰性背景图案 */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.06) 0%, transparent 50%);
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .hero .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            font-weight: 300;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .hero .en-title {
+            font-size: 0.95rem;
+            opacity: 0.7;
+            font-weight: 300;
+            position: relative;
+        }
+
+        .hero .badges {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            position: relative;
+            flex-wrap: wrap;
+        }
+
+        .hero .badge {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.25);
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ===== 通用区段 ===== */
+        .section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title .num {
+            background: var(--primary);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1.05rem;
+        }
+
+        /* ===== 卡片网格 ===== */
+        .card-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .card-grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+        .card-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .card-grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+        }
+
+        .card .card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-dark);
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+        }
+
+        /* ===== 流程图样式 ===== */
+        .flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 2rem 0;
+        }
+
+        .flow-step {
+            background: var(--card);
+            border: 2px solid var(--primary-light);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: var(--shadow);
+        }
+
+        .flow-step .step-num {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .flow-step .step-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--primary-light);
+            font-weight: 700;
+        }
+
+        /* ===== 代码块 ===== */
+        .code-block {
+            background: var(--code-bg);
+            color: var(--code-text);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            position: relative;
+            margin: 1rem 0;
+        }
+
+        .code-block .code-label {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.75rem;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.4);
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        /* 语法高亮颜色 */
+        .kw { color: #c792ea; }       /* 关键字：紫色 */
+        .fn { color: #82aaff; }       /* 函数名：蓝色 */
+        .str { color: #c3e88d; }      /* 字符串：绿色 */
+        .num { color: #f78c6c; }      /* 数字：橙色 */
+        .cm { color: #546e7a; }       /* 注释：灰色 */
+        .op { color: #89ddff; }       /* 运算符：青色 */
+        .var { color: #eeffff; }      /* 变量：白色 */
+
+        /* ===== 公式展示 ===== */
+        .formula-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 var(--radius) var(--radius) 0;
+            padding: 1.25rem 1.5rem;
+            margin: 1rem 0;
+            font-size: 1.05rem;
+            overflow-x: auto;
+        }
+
+        .formula-box .formula-label {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .formula-box .formula {
+            color: var(--primary-dark);
+            padding: 0.3rem 0;
+            text-align: center;
+        }
+
+        .formula-box .formula.text-left {
+            text-align: left;
+        }
+
+        /* KaTeX 公式内的行高微调 */
+        .formula-box .katex-display {
+            margin: 0.4em 0;
+        }
+
+        .formula-box .formula-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* ===== 图表容器 ===== */
+        .chart-container {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .chart-container h3 {
+            font-size: 1.05rem;
+            color: var(--primary-dark);
+            margin-bottom: 1rem;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* ===== 数据表格 ===== */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            margin: 1rem 0;
+        }
+
+        .data-table th {
+            background: var(--primary-dark);
+            color: white;
+            padding: 0.65rem 0.75rem;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .data-table th:first-child { border-radius: 8px 0 0 0; }
+        .data-table th:last-child { border-radius: 0 8px 0 0; }
+
+        .data-table td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table tr:nth-child(even) td { background: #f5f5f5; }
+        .data-table tr:hover td { background: #e8f5e9; }
+
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        /* ===== 参数标签 ===== */
+        .param-tag {
+            display: inline-block;
+            background: #e8f5e9;
+            color: var(--primary-dark);
+            padding: 0.15rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0.1rem;
+        }
+
+        /* ===== 页脚 ===== */
+        footer {
+            background: var(--primary-dark);
+            color: rgba(255,255,255,0.8);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.88rem;
+        }
+
+        footer a { color: rgba(255,255,255,0.9); text-decoration: underline; }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
+            .hero { padding: 3rem 1.5rem 2.5rem; }
+            .section { padding: 2.5rem 1.25rem; }
+            .flow { flex-direction: column; }
+            .flow-arrow { transform: rotate(90deg); }
+            .chart-row { grid-template-columns: 1fr; }
+            nav .nav-links { gap: 0.75rem; font-size: 0.8rem; }
+            /* 动画区域在小屏下改为单列 */
+            #animation > div { grid-template-columns: 1fr !important; }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 1.6rem; }
+            .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== 导航栏 ==================== -->
+<nav>
+    <div class="nav-inner">
+        <div class="logo">
+            <span class="icon">🌾</span> SIMPLE 作物模型
+        </div>
+        <ul class="nav-links">
+            <li><a href="#overview">模型概览</a></li>
+            <li><a href="#structure">模型结构</a></li>
+            <li><a href="#formulas">核心公式</a></li>
+            <li><a href="#curves">胁迫响应曲线</a></li>
+            <li><a href="#animation">生长动画</a></li>
+            <li><a href="#code">代码实现</a></li>
+            <li><a href="#results">模拟结果</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ==================== 英雄区（标题页） ==================== -->
+<header class="hero">
+    <h1>SIMPLE 作物模型</h1>
+    <p class="subtitle">Soil-Plant-Atmosphere Interactions for Model Evaluation and Learning</p>
+    <p class="en-title">土壤-植物-大气交互模型评估与学习 — Python 教学版</p>
+    <div class="badges">
+        <span class="badge">Python 实现</span>
+        <span class="badge">多作物支持</span>
+        <span class="badge">气象驱动</span>
+        <span class="badge">胁迫响应</span>
+        <span class="badge">CO₂ 施肥效应</span>
+    </div>
+</header>
+
+<!-- ==================== 第1节：模型概览 ==================== -->
+<section class="section" id="overview">
+    <h2 class="section-title"><span class="num">1</span> 模型概览</h2>
+    <p class="section-desc">
+        SIMPLE 是一个基于过程的作物生长模型，通过气象、土壤和管理输入来模拟作物每日生长与最终产量。
+    </p>
+
+    <div class="card-grid cols-3">
+        <!-- 卡片：模型定位 -->
+        <div class="card">
+            <div class="card-icon">🌱</div>
+            <h3>基于过程的模型</h3>
+            <p>不同于统计模型，SIMPLE 从作物生理过程出发，模拟光截获、积温累积、生物量增长等逐日动态过程。</p>
+        </div>
+        <!-- 卡片：核心驱动 -->
+        <div class="card">
+            <div class="card-icon">☀️</div>
+            <h3>气象驱动</h3>
+            <p>以每日最高温、最低温、太阳辐射和降水为核心驱动变量，计算积温、蒸散和干旱指数。</p>
+        </div>
+        <!-- 卡片：胁迫机制 -->
+        <div class="card">
+            <div class="card-icon">🌡️</div>
+            <h3>多重胁迫响应</h3>
+            <p>集成温度胁迫、高温胁迫、水分胁迫和 CO₂ 施肥效应，实现复杂环境条件下的产量模拟。</p>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== 第2节：模型结构 ==================== -->
+<section class="section" id="structure" style="background: #f0f4f0;">
+    <h2 class="section-title"><span class="num">2</span> 模型结构与工作流</h2>
+    <p class="section-desc">从输入数据读取到最终产量输出的完整流程：</p>
+
+    <!-- 流程图 -->
+    <div class="flow">
+        <div class="flow-step">
+            <div class="step-num">Step 1</div>
+            <div class="step-label">读取输入</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+            <div class="step-num">Step 2</div>
+            <div class="step-label">合并数据</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+            <div class="step-num">Step 3</div>
+            <div class="step-label">计算 ARID</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+            <div class="step-num">Step 4</div>
+            <div class="step-label">逐日模拟</div>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-step">
+            <div class="step-num">Step 5</div>
+            <div class="step-label">输出结果</div>
+        </div>
+    </div>
+
+    <!-- 输入输出说明 -->
+    <div class="card-grid cols-2" style="margin-top: 2rem;">
+        <div class="card">
+            <h3>📁 输入文件</h3>
+            <p style="margin-bottom: 0.5rem;">模型需要以下 6 类输入文件：</p>
+            <p>
+                <span class="param-tag">Treatment.csv</span>
+                <span class="param-tag">Simulation Management.csv</span>
+                <span class="param-tag">Cultivar.csv</span>
+                <span class="param-tag">Soil.csv</span>
+                <span class="param-tag">Species parameter.csv</span>
+                <span class="param-tag">Irrigation.csv</span>
+            </p>
+            <p style="margin-top: 0.75rem;">加上气象数据文件（<code>.WTH</code> 格式），内置 50+ 气象站点。</p>
+        </div>
+        <div class="card">
+            <h3>📊 输出变量</h3>
+            <p style="margin-bottom: 0.5rem;">逐日模拟结果包含 20+ 输出变量：</p>
+            <p>
+                <span class="param-tag">TT 积温</span>
+                <span class="param-tag">fSolar 光截获</span>
+                <span class="param-tag">Biomass 生物量</span>
+                <span class="param-tag">Yield 产量</span>
+                <span class="param-tag">F_Temp</span>
+                <span class="param-tag">F_Heat</span>
+                <span class="param-tag">F_Water</span>
+                <span class="param-tag">ARID</span>
+                <span class="param-tag">ETO</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- 代码结构 -->
+    <div class="card" style="margin-top: 1.5rem;">
+        <h3>🗂️ 代码结构</h3>
+        <div class="card-grid cols-2" style="margin-top: 1rem;">
+            <div>
+                <p style="font-weight: 500; margin-bottom: 0.5rem;"><code>core.py</code> — 核心模型函数</p>
+                <ul style="padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.92rem;">
+                    <li><code>read_weather()</code> — 气象数据读取与处理</li>
+                    <li><code>calculate_arid()</code> — ARID 干旱指数计算</li>
+                    <li><code>simple_crop_model()</code> — 主模拟引擎</li>
+                    <li><code>doy_to_date()</code> — DOY 日期格式转换</li>
+                    <li><code>temperature_response()</code> — 温度响应函数</li>
+                    <li><code>water_response()</code> — 水分胁迫函数</li>
+                    <li><code>heat_response()</code> — 高温胁迫函数</li>
+                </ul>
+            </div>
+            <div>
+                <p style="font-weight: 500; margin-bottom: 0.5rem;"><code>run.py</code> — 主执行脚本</p>
+                <ul style="padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.92rem;">
+                    <li>读取并合并 6 类输入文件</li>
+                    <li>筛选启用试验（ON_Off = 1）</li>
+                    <li>循环运行每个处理组合</li>
+                    <li>汇总逐日结果与摘要统计</li>
+                    <li>输出 CSV 文件到 Output 目录</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== 第3节：核心公式 ==================== -->
+<section class="section" id="formulas">
+    <h2 class="section-title"><span class="num">3</span> 核心公式</h2>
+    <p class="section-desc">SIMPLE 模型的关键数学公式，构成逐日模拟的物理基础。</p>
+
+    <div class="card-grid cols-2">
+        <!-- 公式1：有效积温 -->
+        <div class="formula-box">
+            <div class="formula-label">有效积温 (Degree Day)</div>
+            <div class="formula">$$\text{dTT} = \max(\overline{T} - T_{\text{base}},\; 0)$$</div>
+            <div class="formula-desc">每日有效积温 = 平均温度与基础温度之差（不低于0），累积形成 $\text{TT}$ 驱动物候发育。</div>
+        </div>
+
+        <!-- 公式2：日生物量增量 -->
+        <div class="formula-box">
+            <div class="formula-label">日生物量增量</div>
+            <div class="formula">$$\Delta B = 10 \times \text{RUE} \times f_{\text{solar}} \times \text{SRAD} \times F_{\text{CO}_2} \times F_{\text{Temp}} \times \min(F_{\text{Water}},\; F_{\text{Heat}})$$</div>
+            <div class="formula-desc">由辐射利用效率、光截获率、太阳辐射和各胁迫因子共同决定。</div>
+        </div>
+
+        <!-- 公式3：温度响应 -->
+        <div class="formula-box">
+            <div class="formula-label">温度响应函数</div>
+            <div class="formula">$$F_{\text{Temp}} = \begin{cases} 1 & \overline{T} \geq T_{\text{opt}} \\[6pt] \dfrac{\overline{T} - T_{\text{base}}}{T_{\text{opt}} - T_{\text{base}}} & \overline{T} < T_{\text{opt}} \end{cases}$$</div>
+            <div class="formula-desc">温度低于最适温度时线性增长，达到最适温度后响应值恒为 1。</div>
+        </div>
+
+        <!-- 公式4：水分胁迫 -->
+        <div class="formula-box">
+            <div class="formula-label">水分胁迫响应</div>
+            <div class="formula">$$F_{\text{Water}} = \max\!\left(0,\; 1 - S_{\text{Water}} \times \text{ARID}\right)$$</div>
+            <div class="formula-desc">ARID 干旱指数越大，水分胁迫越强，生物量积累越受抑制。</div>
+        </div>
+
+        <!-- 公式5：高温胁迫 -->
+        <div class="formula-box">
+            <div class="formula-label">高温胁迫响应</div>
+            <div class="formula">$$F_{\text{Heat}} = \begin{cases} 1 & T_{\max} \leq T_{\text{MaxT}} \\[6pt] 1 - \dfrac{T_{\max} - T_{\text{MaxT}}}{T_{\text{ExtremeT}} - T_{\text{MaxT}}} & T_{\text{MaxT}} < T_{\max} < T_{\text{ExtremeT}} \\[6pt] 0 & T_{\max} \geq T_{\text{ExtremeT}} \end{cases}$$</div>
+            <div class="formula-desc">最高温超过阈值 $T_{\text{MaxT}}$ 后线性下降，达到 $T_{\text{ExtremeT}}$ 时完全胁迫（值为0）。</div>
+        </div>
+
+        <!-- 公式6：CO2施肥效应 -->
+        <div class="formula-box">
+            <div class="formula-label">CO₂ 施肥效应</div>
+            <div class="formula">$$F_{\text{CO}_2} = \begin{cases} 1 + \text{CO}_2\_\text{RUE} \times \dfrac{350}{100} & \text{CO}_2 \geq 700 \\[8pt] \max\!\left(\text{CO}_2\_\text{RUE} \times \text{CO}_2 \times 0.01 + 1 - 0.01 \times 350 \times \text{CO}_2\_\text{RUE},\; 1\right) & \text{CO}_2 < 700 \end{cases}$$</div>
+            <div class="formula-desc">模拟大气 CO₂ 浓度升高对辐射利用效率的促进作用。</div>
+        </div>
+
+        <!-- 公式7：光截获双逻辑曲线 -->
+        <div class="formula-box" style="grid-column: 1 / -1;">
+            <div class="formula-label">光截获动态 — 双逻辑曲线</div>
+            <div class="formula">$$f_{\text{solar}} = \min\!\left(f_{\text{solar}_1},\; f_{\text{solar}_2}\right)$$</div>
+            <div class="formula text-left" style="margin-top: 0.4rem;">
+                $$f_{\text{solar}_1} = \frac{I_{\max}}{1 + \exp\!\left(-0.01 \times (\text{TT} - I_{50A})\right)} \qquad \longleftarrow \text{营养生长期上升支}$$
+            </div>
+            <div class="formula text-left">
+                $$f_{\text{solar}_2} = \frac{I_{\max}}{1 + \exp\!\left(\phantom{-}0.01 \times (\text{TT} - (\text{Tsum} - I_{50B}))\right)} \qquad \longleftarrow \text{灌浆期下降支}$$
+            </div>
+            <div class="formula-desc">双逻辑曲线模拟光截获从低到高（营养生长）再从高到低（衰老）的完整动态过程。其中 $I_{\max}$ 为最大光截获率，$I_{50A}$、$I_{50B}$ 控制曲线拐点位置。</div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== 第3.5节：胁迫响应曲线 ==================== -->
+<section class="section" id="curves" style="background: #f0f4f0;">
+    <h2 class="section-title"><span class="num">4</span> 胁迫与响应曲线</h2>
+    <p class="section-desc">
+        交互式展示各胁迫因子和响应函数随输入变量变化的曲线。不同作物因物种参数差异而呈现不同响应特征，<strong>点击图例可切换显示</strong>。
+    </p>
+
+    <!-- 第一行：温度响应 + 高温胁迫 -->
+    <div class="chart-row">
+        <div class="chart-container">
+            <h3>🌡️ 温度响应曲线 F<sub>Temp</sub></h3>
+            <p style="font-size:0.85rem; color:#616161; margin-bottom:0.75rem;">
+                当 $\\overline{T} \\geq T_{\\text{opt}}$ 时 F<sub>Temp</sub>=1；低于最适温度时线性增长。小麦(T<sub>opt</sub>=15°C)对低温更敏感，玉米(T<sub>opt</sub>=28°C)需要更高温度才能达到最佳生长。
+            </p>
+            <canvas id="curveTempChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>🔥 高温胁迫曲线 F<sub>Heat</sub></h3>
+            <p style="font-size:0.85rem; color:#616161; margin-bottom:0.75rem;">
+                T<sub>max</sub> 低于阈值 MaxT 时不发生胁迫；超过后线性下降至 ExtremeT 时完全胁迫。大豆(MaxT=36°C)比小麦(MaxT=34°C)更耐高温。
+            </p>
+            <canvas id="curveHeatChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 第二行：水分胁迫 + CO2效应 -->
+    <div class="chart-row" style="margin-top: 1.5rem;">
+        <div class="chart-container">
+            <h3>💧 水分胁迫曲线 F<sub>Water</sub></h3>
+            <p style="font-size:0.85rem; color:#616161; margin-bottom:0.75rem;">
+                ARID 干旱指数越大，水分胁迫越强。S<sub>Water</sub> 控制作物对干旱的敏感度：玉米(S<sub>Water</sub>=1.5)比小麦(S<sub>Water</sub>=0.4)对干旱更敏感。
+            </p>
+            <canvas id="curveWaterChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>🏭 CO₂ 施肥效应 F<sub>CO₂</sub></h3>
+            <p style="font-size:0.85rem; color:#616161; margin-bottom:0.75rem;">
+                模拟大气 CO₂ 浓度升高对辐射利用效率的促进。小麦(CO₂_RUE=0.08)对 CO₂ 升高响应比玉米(CO₂_RUE=0.01)更明显。
+            </p>
+            <canvas id="curveCO2Chart"></canvas>
+        </div>
+    </div>
+
+    <!-- 第三行：光截获双逻辑曲线（全宽） -->
+    <div class="chart-container" style="margin-top: 1.5rem; max-width: 900px; margin-left: auto; margin-right: auto;">
+        <h3>🌿 光截获动态曲线 f<sub>Solar</sub> — 双逻辑曲线</h3>
+        <p style="font-size:0.85rem; color:#616161; margin-bottom:0.75rem;">
+            随积温(TT)推进，光截获率先上升（营养生长）后下降（衰老），形成典型的钟形曲线。不同作物的 I50A、I50B、Tsum 参数决定了曲线的形状和位置。
+        </p>
+        <canvas id="curveFsolarChart"></canvas>
+    </div>
+</section>
+
+<!-- ==================== 第4.5节：作物生长动态动画 ==================== -->
+<section class="section" id="animation">
+    <h2 class="section-title"><span class="num">5</span> 作物生长动态模拟</h2>
+    <p class="section-desc">
+        可视化展示从播种到成熟的完整生长过程。环境因子（光照、水分）实时影响生长速率，作物随风自然摆动。使用控制面板调整作物类型、模拟速度或暂停观察。
+    </p>
+
+    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
+        <!-- 主画布 -->
+        <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;">
+            <canvas id="cropCanvas" style="display: block; width: 100%;"></canvas>
+        </div>
+
+        <!-- 控制面板 -->
+        <div style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.25rem;">
+            <h3 style="font-size: 1rem; color: var(--primary-dark); margin-bottom: 1rem;">🎛️ 控制面板</h3>
+
+            <!-- 作物选择 -->
+            <label style="font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.3rem;">作物类型</label>
+            <select id="cropSelect" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; margin-bottom: 1rem;">
+                <option value="wheat">小麦 (Wheat)</option>
+                <option value="maize">玉米 (Maize)</option>
+                <option value="soybean">大豆 (Soybean)</option>
+                <option value="rice">水稻 (Rice)</option>
+            </select>
+
+            <!-- 播放控制 -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <button id="btnPlay" style="flex:1; padding: 0.5rem; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">⏸ 暂停</button>
+                <button id="btnReset" style="flex:1; padding: 0.5rem; background: #757575; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">↺ 重播</button>
+            </div>
+
+            <!-- 速度滑块 -->
+            <label style="font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.3rem;">模拟速度</label>
+            <input id="speedSlider" type="range" min="0.2" max="5" step="0.1" value="1" style="width: 100%; margin-bottom: 0.2rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                <span>0.2x</span><span id="speedVal">1.0x</span><span>5.0x</span>
+            </div>
+
+            <!-- 光照滑块 -->
+            <label style="font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.3rem;">☀️ 光照强度</label>
+            <input id="lightSlider" type="range" min="0.1" max="1" step="0.05" value="0.8" style="width: 100%; margin-bottom: 0.2rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                <span>阴</span><span id="lightVal">0.8</span><span>晴</span>
+            </div>
+
+            <!-- 水分滑块 -->
+            <label style="font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.3rem;">💧 水分供给</label>
+            <input id="waterSlider" type="range" min="0" max="1" step="0.05" value="0.7" style="width: 100%; margin-bottom: 0.2rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                <span>干旱</span><span id="waterVal">0.7</span><span>充足</span>
+            </div>
+
+            <!-- 风力滑块 -->
+            <label style="font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.3rem;">🌬️ 风力强度</label>
+            <input id="windSlider" type="range" min="0" max="1" step="0.05" value="0.3" style="width: 100%; margin-bottom: 0.2rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                <span>无风</span><span id="windVal">0.3</span><span>大风</span>
+            </div>
+
+            <!-- 状态信息 -->
+            <div style="background: #f5f5f5; border-radius: 8px; padding: 0.75rem; font-size: 0.82rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                    <span style="color: var(--text-secondary);">生长阶段</span>
+                    <span id="stageLabel" style="font-weight: 600; color: var(--primary);">发芽期</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                    <span style="color: var(--text-secondary);">积温 TT</span>
+                    <span id="ttLabel" style="font-weight: 500;">0 °C·d</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                    <span style="color: var(--text-secondary);">生长天数</span>
+                    <span id="dayLabel" style="font-weight: 500;">0 天</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary);">生物量</span>
+                    <span id="bioLabel" style="font-weight: 500;">0 kg/ha</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== 第6节：代码实现 ==================== -->
+<section class="section" id="code" style="background: #f0f4f0;">
+    <h2 class="section-title"><span class="num">6</span> 核心代码实现</h2>
+    <p class="section-desc">选取模型中最关键的函数，展示 Python 实现逻辑。</p>
+
+    <!-- 代码1：温度响应 -->
+    <div class="code-block">
+        <span class="code-label">core.py</span>
+<span class="cm"># 温度响应函数：计算温度对作物生长的影响因子</span>
+<span class="cm"># 当平均温度 >= 最适温度时，响应值为 1（最佳条件）</span>
+<span class="cm"># 否则按线性插值计算：(Tmean - Tbase) / (Topt - Tbase)</span>
+<span class="kw">def</span> <span class="fn">temperature_response</span>(<span class="var">tmean</span>, <span class="var">tbase</span>, <span class="var">topt</span>):
+    <span class="kw">if</span> tmean <span class="op">>=</span> topt:
+        <span class="kw">return</span> <span class="num">1.0</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="fn">max</span>((tmean <span class="op">-</span> tbase) <span class="op">/</span> (topt <span class="op">-</span> tbase), <span class="num">0</span>)
+    </div>
+
+    <!-- 代码2：水分胁迫 -->
+    <div class="code-block">
+        <span class="code-label">core.py</span>
+<span class="cm"># 水分胁迫响应函数：基于 ARID 干旱指数</span>
+<span class="cm"># ARID 越大表示越干旱，S_Water 控制作物对干旱的敏感度</span>
+<span class="kw">def</span> <span class="fn">water_response</span>(<span class="var">arid</span>, <span class="var">s_water</span>):
+    <span class="kw">return</span> <span class="fn">max</span>(<span class="num">0</span>, <span class="num">1</span> <span class="op">-</span> s_water <span class="op">*</span> arid)
+    </div>
+
+    <!-- 代码3：日生物量计算 -->
+    <div class="code-block">
+        <span class="code-label">core.py</span>
+<span class="cm"># 每日生物量增量计算 — 模型的核心公式</span>
+<span class="cm"># dBiomass = 10 × RUE × fSolar × SRAD × F_CO2 × F_Temp × min(F_Water, F_Heat)</span>
+<span class="cm"># 其中：RUE=辐射利用效率, fSolar=光截获率, SRAD=太阳辐射</span>
+<span class="cm">#       F_CO2=CO2施肥效应, F_Temp=温度响应, F_Water/F_Heat=胁迫因子</span>
+<span class="kw">def</span> <span class="fn">calculate_daily_biomass</span>(<span class="var">f_solar</span>, <span class="var">srad</span>, <span class="var">f_co2</span>, <span class="var">f_temp</span>, <span class="var">f_water</span>, <span class="var">f_heat</span>, <span class="var">rue</span>):
+    <span class="kw">return</span> <span class="num">10</span> <span class="op">*</span> rue <span class="op">*</span> f_solar <span class="op">*</span> srad <span class="op">*</span> f_co2 <span class="op">*</span> f_temp <span class="op">*</span> <span class="fn">min</span>(f_water, f_heat)
+    </div>
+
+    <!-- 代码4：光截获动态 -->
+    <div class="code-block">
+        <span class="code-label">core.py — 光截获双逻辑曲线</span>
+<span class="cm"># 双逻辑曲线模拟光截获率随积温(TT)变化的动态过程</span>
+<span class="cm"># fSolar1：营养生长期上升支，从低截获逐步增加</span>
+<span class="cm"># fSolar2：灌浆期下降支，从高截获逐步降低（衰老）</span>
+f_solar1 <span class="op">=</span> <span class="fn">min</span>(<span class="num">1</span>, fsolar_max <span class="op">/</span> (<span class="num">1</span> <span class="op">+</span> np.<span class="fn">exp</span>(<span class="op">-</span><span class="num">0.01</span> <span class="op">*</span> (tt <span class="op">-</span> i50a_prev))))
+f_solar2 <span class="op">=</span> <span class="fn">min</span>(<span class="num">1</span>, fsolar_max <span class="op">/</span> (<span class="num">1</span> <span class="op">+</span> np.<span class="fn">exp</span>(<span class="num">0.01</span> <span class="op">*</span> (tt <span class="op">-</span> (tsum <span class="op">-</span> i50b_prev)))))
+
+<span class="cm"># 最终光截获 = 两条曲线的较小值 × 水分胁迫修正</span>
+result.loc[day, <span class="str">"fSolar"</span>] <span class="op">=</span> <span class="fn">min</span>(f_solar1, f_solar2) <span class="op">*</span> <span class="fn">min</span>(result[<span class="str">"fSolar_water"</span>].iloc[day<span class="op">-</span><span class="num">1</span>], <span class="num">1</span>)
+    </div>
+</section>
+
+<!-- ==================== 第7节：模拟结果 ==================== -->
+<section class="section" id="results">
+    <h2 class="section-title"><span class="num">7</span> 模拟结果展示</h2>
+    <p class="section-desc">运行 <code>python3 run.py</code> 后，27 个处理组合全部模拟成功。以下是关键结果。</p>
+
+    <!-- 图表区域 -->
+    <div class="chart-row">
+        <div class="chart-container">
+            <h3>📈 各处理最终产量对比</h3>
+            <canvas id="yieldChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>📈 各处理最终生物量对比</h3>
+            <canvas id="biomassChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-row" style="margin-top: 1.5rem;">
+        <div class="chart-container">
+            <h3>📈 小麦 FACE95 逐日生长动态</h3>
+            <canvas id="dailyChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>📈 胁迫因子逐日变化</h3>
+            <canvas id="stressChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 汇总表格 -->
+    <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--primary-dark);">📋 模拟结果汇总表</h3>
+    <div class="table-wrap">
+        <table class="data-table" id="summaryTable">
+            <thead>
+                <tr>
+                    <th>作物</th>
+                    <th>试验</th>
+                    <th>处理</th>
+                    <th>模拟天数</th>
+                    <th>生物量 (kg/ha)</th>
+                    <th>产量 (kg/ha)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ==================== 页脚 ==================== -->
+<footer>
+    <p>SIMPLE 作物模型 — Python 教学演示版 &nbsp;|&nbsp; 作者：Mayuanyuan &nbsp;|&nbsp; 2025</p>
+    <p style="margin-top: 0.5rem;">
+        <a href="https://github.com/YuanyuanMa03/a-simple-crop-model" target="_blank">GitHub 仓库</a>
+    </p>
+</footer>
+
+<!-- ==================== JavaScript：图表渲染与数据 ==================== -->
+<script>
+// ===== 模拟结果数据（来自 Res_summary_all.csv） =====
+const summaryData = [
+    { crop: '小麦', exp: 'FACE95', trt: 1, duration: 139, biomass: 11480, yield: 4133 },
+    { crop: '小麦', exp: 'FACE95', trt: 2, duration: 158, biomass: 28613, yield: 10301 },
+    { crop: '小麦', exp: 'FACE92', trt: 1, duration: 159, biomass: 21489, yield: 7736 },
+    { crop: '小麦', exp: 'FACE92', trt: 2, duration: 161, biomass: 24658, yield: 8877 },
+    { crop: '小麦', exp: 'FACE92', trt: 3, duration: 149, biomass: 17428, yield: 6274 },
+    { crop: '小麦', exp: 'FACE92', trt: 4, duration: 149, biomass: 17428, yield: 6274 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 1, duration: 147, biomass: 11413, yield: 4109 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 4, duration: 137, biomass: 12765, yield: 4595 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 7, duration: 139, biomass: 10992, yield: 3957 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 10, duration: 119, biomass: 11494, yield: 4138 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 11, duration: 131, biomass: 13928, yield: 5014 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 14, duration: 121, biomass: 23036, yield: 8293 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 15, duration: 99, biomass: 19287, yield: 6943 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 18, duration: 92, biomass: 17241, yield: 6207 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 21, duration: 82, biomass: 9949, yield: 3582 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 24, duration: 75, biomass: 8550, yield: 3078 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 27, duration: 58, biomass: 7447, yield: 2681 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 28, duration: 60, biomass: 6800, yield: 2448 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 29, duration: 66, biomass: 4989, yield: 1796 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 30, duration: 38, biomass: 1888, yield: 680 },
+    { crop: '小麦', exp: 'HSCE0701', trt: 31, duration: 28, biomass: 526, yield: 189 },
+    { crop: '小麦', exp: 'NEWZ9201', trt: 1, duration: 246, biomass: 30405, yield: 10338 },
+    { crop: '大豆', exp: 'UFGA7801', trt: 1, duration: 116, biomass: 8231, yield: 2881 },
+    { crop: '大豆', exp: 'UFGA7801', trt: 2, duration: 99, biomass: 5990, yield: 2097 },
+    { crop: '玉米', exp: 'UFGA8201', trt: 1, duration: 133, biomass: 8998, yield: 4499 },
+    { crop: '玉米', exp: 'UFGA8201', trt: 2, duration: 137, biomass: 22452, yield: 11226 },
+    { crop: '玉米', exp: 'UFGA8201', trt: 3, duration: 137, biomass: 18007, yield: 9004 },
+];
+
+// ===== 逐日数据（小麦 FACE95 Trt1，来自 Res_daily_all.csv 采样） =====
+const dailyData = {
+    days:     [1,10,20,30,40,50,60,70,80,90,100,110,120,130,139],
+    biomass:  [1,9,25,62,128,288,619,1380,2898,5505,8902,12317,15319,16742,16818],
+    yield:    [0.36,3.24,9,22.3,46.1,103.7,222.8,496.8,1043.3,1981.8,3204.7,4434.1,5514.8,6027.1,6054.5],
+    fSolar:   [0.001,0.017,0.086,0.237,0.433,0.637,0.805,0.905,0.949,0.947,0.880,0.730,0.335,0.025,0.001],
+    fWater:   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    fTemp:    [0.51,0.61,0.58,0.58,0.72,0.84,0.86,0.85,0.91,0.89,0.84,0.86,0.86,0.52,0.34],
+    fHeat:    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+};
+
+// ===== 颜色配置 =====
+const cropColors = {
+    '小麦': '#4caf50',
+    '大豆': '#ff9800',
+    '玉米': '#2196f3',
+};
+
+// ===== Chart.js 通用配置 =====
+Chart.defaults.font.family = "'Noto Sans SC', sans-serif";
+Chart.defaults.font.size = 12;
+
+// ===== 图表1：产量对比柱状图 =====
+new Chart(document.getElementById('yieldChart'), {
+    type: 'bar',
+    data: {
+        labels: summaryData.map(d => `${d.exp}-${d.trt}`),
+        datasets: [{
+            label: '产量 (kg/ha)',
+            data: summaryData.map(d => d.yield),
+            backgroundColor: summaryData.map(d => cropColors[d.crop] + 'cc'),
+            borderColor: summaryData.map(d => cropColors[d.crop]),
+            borderWidth: 1,
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: (items) => {
+                        const i = items[0].dataIndex;
+                        return `${summaryData[i].crop} - ${summaryData[i].exp} - Trt ${summaryData[i].trt}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: { ticks: { maxRotation: 60, font: { size: 10 } } },
+            y: { title: { display: true, text: '产量 (kg/ha)' }, beginAtZero: true }
+        }
+    }
+});
+
+// ===== 图表2：生物量对比柱状图 =====
+new Chart(document.getElementById('biomassChart'), {
+    type: 'bar',
+    data: {
+        labels: summaryData.map(d => `${d.exp}-${d.trt}`),
+        datasets: [{
+            label: '生物量 (kg/ha)',
+            data: summaryData.map(d => d.biomass),
+            backgroundColor: summaryData.map(d => cropColors[d.crop] + '99'),
+            borderColor: summaryData.map(d => cropColors[d.crop]),
+            borderWidth: 1,
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { ticks: { maxRotation: 60, font: { size: 10 } } },
+            y: { title: { display: true, text: '生物量 (kg/ha)' }, beginAtZero: true }
+        }
+    }
+});
+
+// ===== 图表3：逐日生长动态（双Y轴） =====
+new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: {
+        labels: dailyData.days,
+        datasets: [
+            {
+                label: '生物量 (kg/ha)',
+                data: dailyData.biomass,
+                borderColor: '#4caf50',
+                backgroundColor: '#4caf5020',
+                fill: true,
+                yAxisID: 'y',
+                tension: 0.3,
+            },
+            {
+                label: '光截获率 fSolar',
+                data: dailyData.fSolar,
+                borderColor: '#ff9800',
+                backgroundColor: '#ff980020',
+                fill: false,
+                yAxisID: 'y1',
+                tension: 0.3,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top' } },
+        scales: {
+            x: { title: { display: true, text: '播种后天数 (DAP)' } },
+            y: { type: 'linear', position: 'left', title: { display: true, text: '生物量 (kg/ha)' }, beginAtZero: true },
+            y1: { type: 'linear', position: 'right', title: { display: true, text: 'fSolar' }, min: 0, max: 1, grid: { drawOnChartArea: false } }
+        }
+    }
+});
+
+// ===== 图表4：胁迫因子逐日变化 =====
+new Chart(document.getElementById('stressChart'), {
+    type: 'line',
+    data: {
+        labels: dailyData.days,
+        datasets: [
+            {
+                label: 'F_Temp (温度响应)',
+                data: dailyData.fTemp,
+                borderColor: '#2196f3',
+                borderDash: [],
+                tension: 0.3,
+            },
+            {
+                label: 'F_Water (水分响应)',
+                data: dailyData.fWater,
+                borderColor: '#4caf50',
+                borderDash: [5, 5],
+                tension: 0.3,
+            },
+            {
+                label: 'F_Heat (高温响应)',
+                data: dailyData.fHeat,
+                borderColor: '#f44336',
+                borderDash: [2, 2],
+                tension: 0.3,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+            x: { title: { display: true, text: '播种后天数 (DAP)' } },
+            y: { title: { display: true, text: '胁迫因子值' }, min: 0, max: 1.1 }
+        }
+    }
+});
+
+// ===== 填充汇总表格 =====
+const tbody = document.querySelector('#summaryTable tbody');
+summaryData.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td>${d.crop}</td>
+        <td>${d.exp}</td>
+        <td>${d.trt}</td>
+        <td>${d.duration}</td>
+        <td>${d.biomass.toLocaleString()}</td>
+        <td>${d.yield.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+});
+
+// ================================================================
+// ===== 胁迫与响应曲线绘制 =====
+// ================================================================
+
+// 物种参数（来自 Species parameter.csv）
+const speciesParams = {
+    '小麦 (Wheat)':  { tbase: 0,  topt: 15, maxT: 34, extremeT: 45, co2_rue: 0.08, s_water: 0.4, tsum: 2550, i50a: 480, i50b: 200, color: '#4caf50' },
+    '玉米 (Maize)':  { tbase: 8,  topt: 28, maxT: 34, extremeT: 50, co2_rue: 0.01, s_water: 1.5, tsum: 2050, i50a: 500, i50b: 50,  color: '#2196f3' },
+    '大豆 (Soybean)':{ tbase: 6,  topt: 27, maxT: 36, extremeT: 50, co2_rue: 0.07, s_water: 0.9, tsum: 2500, i50a: 680, i50b: 300, color: '#ff9800' },
+    '水稻 (Rice)':   { tbase: 9,  topt: 26, maxT: 34, extremeT: 50, co2_rue: 0.08, s_water: 1.0, tsum: 2300, i50a: 850, i50b: 200, color: '#9c27b0' },
+};
+
+// 通用曲线图配置
+const curveChartOpts = (xLabel, yLabel, yMin = 0, yMax = 1.1) => ({
+    responsive: true,
+    maintainAspectRatio: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+        legend: { position: 'top', labels: { usePointStyle: true, padding: 15 } },
+    },
+    scales: {
+        x: { title: { display: true, text: xLabel } },
+        y: { title: { display: true, text: yLabel }, min: yMin, max: yMax }
+    }
+});
+
+// ===== 1. 温度响应曲线 =====
+{
+    // 生成 -5 ~ 45°C 的温度序列
+    const temps = Array.from({length: 101}, (_, i) => -5 + i * 0.5);
+    const datasets = Object.entries(speciesParams).map(([name, p]) => ({
+        label: name,
+        data: temps.map(t => t >= p.topt ? 1 : Math.max((t - p.tbase) / (p.topt - p.tbase), 0)),
+        borderColor: p.color,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0,
+    }));
+    // 添加 F_Temp=1 参考线
+    datasets.push({
+        label: 'F_Temp = 1 (最佳)',
+        data: temps.map(() => 1),
+        borderColor: '#bdbdbd',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+    });
+    new Chart(document.getElementById('curveTempChart'), {
+        type: 'line',
+        data: { labels: temps.map(t => t.toFixed(0)), datasets },
+        options: curveChartOpts('平均温度 Tmean (°C)', 'F_Temp'),
+    });
+}
+
+// ===== 2. 高温胁迫曲线 =====
+{
+    const tmaxs = Array.from({length: 61}, (_, i) => 20 + i * 0.5); // 20~50°C
+    const datasets = Object.entries(speciesParams).map(([name, p]) => ({
+        label: name,
+        data: tmaxs.map(tmax =>
+            tmax <= p.maxT ? 1 : (tmax > p.extremeT ? 0 : Math.max(1 - (tmax - p.maxT) / (p.extremeT - p.maxT), 0))
+        ),
+        borderColor: p.color,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0,
+    }));
+    datasets.push({
+        label: 'F_Heat = 1 (无胁迫)',
+        data: tmaxs.map(() => 1),
+        borderColor: '#bdbdbd',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+    });
+    new Chart(document.getElementById('curveHeatChart'), {
+        type: 'line',
+        data: { labels: tmaxs.map(t => t.toFixed(0)), datasets },
+        options: curveChartOpts('最高温度 Tmax (°C)', 'F_Heat'),
+    });
+}
+
+// ===== 3. 水分胁迫曲线 =====
+{
+    const arids = Array.from({length: 101}, (_, i) => i * 0.01); // 0~1
+    const datasets = Object.entries(speciesParams).map(([name, p]) => ({
+        label: name,
+        data: arids.map(arid => Math.max(0, 1 - p.s_water * arid)),
+        borderColor: p.color,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0,
+    }));
+    datasets.push({
+        label: 'F_Water = 0 (完全胁迫)',
+        data: arids.map(() => 0),
+        borderColor: '#bdbdbd',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+    });
+    new Chart(document.getElementById('curveWaterChart'), {
+        type: 'line',
+        data: { labels: arids.map(a => a.toFixed(2)), datasets },
+        options: curveChartOpts('ARID 干旱指数', 'F_Water'),
+    });
+}
+
+// ===== 4. CO2 施肥效应曲线 =====
+{
+    const co2s = Array.from({length: 81}, (_, i) => 300 + i * 5); // 300~700 ppm
+    const datasets = Object.entries(speciesParams).map(([name, p]) => ({
+        label: name,
+        data: co2s.map(co2 =>
+            co2 >= 700
+                ? 1 + p.co2_rue * 350 / 100
+                : Math.max(p.co2_rue * co2 * 0.01 + 1 - 0.01 * 350 * p.co2_rue, 1)
+        ),
+        borderColor: p.color,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0,
+    }));
+    datasets.push({
+        label: 'F_CO₂ = 1 (基准，350ppm)',
+        data: co2s.map(() => 1),
+        borderColor: '#bdbdbd',
+        borderWidth: 1.5,
+        borderDash: [6, 4],
+        pointRadius: 0,
+    });
+    new Chart(document.getElementById('curveCO2Chart'), {
+        type: 'line',
+        data: { labels: co2s.map(c => c.toFixed(0)), datasets },
+        options: curveChartOpts('CO₂ 浓度 (ppm)', 'F_CO₂', 0.95, undefined),
+    });
+}
+
+// ===== 5. 光截获双逻辑曲线 =====
+{
+    // 使用各作物参数生成 TT-fSolar 曲线
+    const datasets = [];
+    Object.entries(speciesParams).forEach(([name, p]) => {
+        const maxTT = p.tsum + p.i50b + 200; // 超过 Tsum+I50B 以展示完整衰退
+        const ttVals = Array.from({length: 201}, (_, i) => i * maxTT / 200);
+        const fsolarMax = 0.95;
+        const fsolarVals = ttVals.map(tt => {
+            const f1 = Math.min(1, fsolarMax / (1 + Math.exp(-0.01 * (tt - p.i50a))));
+            const f2 = Math.min(1, fsolarMax / (1 + Math.exp( 0.01 * (tt - (p.tsum - p.i50b)))));
+            return Math.min(f1, f2);
+        });
+        datasets.push({
+            label: name,
+            data: fsolarVals,
+            borderColor: p.color,
+            borderWidth: 2.5,
+            pointRadius: 0,
+            tension: 0.2,
+        });
+    });
+    // 计算 x 轴最大值（取所有作物中最大的 maxTT）
+    const globalMaxTT = Math.max(...Object.values(speciesParams).map(p => p.tsum + p.i50b + 200));
+    const ttLabels = Array.from({length: 201}, (_, i) => Math.round(i * globalMaxTT / 200));
+    // 需要每条曲线用自己的 x 映射，Chart.js 的 line chart 统一 labels，
+    // 所以改用 scatter 模式手动绘制
+    const scatterDatasets = Object.entries(speciesParams).map(([name, p]) => {
+        const maxTT = p.tsum + p.i50b + 200;
+        const points = Array.from({length: 300}, (_, i) => {
+            const tt = i * maxTT / 299;
+            const f1 = Math.min(1, 0.95 / (1 + Math.exp(-0.01 * (tt - p.i50a))));
+            const f2 = Math.min(1, 0.95 / (1 + Math.exp( 0.01 * (tt - (p.tsum - p.i50b)))));
+            return { x: tt, y: Math.min(f1, f2) };
+        });
+        return {
+            label: name,
+            data: points,
+            borderColor: p.color,
+            borderWidth: 2.5,
+            pointRadius: 0,
+            showLine: true,
+            tension: 0.2,
+        };
+    });
+    new Chart(document.getElementById('curveFsolarChart'), {
+        type: 'scatter',
+        data: { datasets: scatterDatasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: { mode: 'nearest', intersect: false },
+            plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 15 } } },
+            scales: {
+                x: { title: { display: true, text: '有效积温 TT (°C·d)' }, min: 0 },
+                y: { title: { display: true, text: 'fSolar (光截获率)' }, min: 0, max: 1.05 }
+            }
+        }
+    });
+}
+
+// ================================================================
+// ===== 作物生长动态动画 =====
+// ================================================================
+(function() {
+    'use strict';
+
+    const canvas = document.getElementById('cropCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 高 DPI 适配
+    const dpr = window.devicePixelRatio || 1;
+    let W, H; // 画布逻辑尺寸
+
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        W = rect.width;
+        H = Math.max(420, W * 0.5); // 宽高比约 2:1
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ===== 作物参数表 =====
+    const cropDefs = {
+        wheat:   { name: '小麦', tbase: 0,  topt: 15, tsum: 2550, i50a: 480, i50b: 200, maxH: 0.7, leafW: 4,  earLen: 22, color: '#5d8a3c', earColor: '#d4a843', groundY: 0.82 },
+        maize:   { name: '玉米', tbase: 8,  topt: 28, tsum: 2050, i50a: 500, i50b: 50,  maxH: 1.0, leafW: 10, earLen: 18, color: '#4caf50', earColor: '#f9a825', groundY: 0.82 },
+        soybean: { name: '大豆', tbase: 6,  topt: 27, tsum: 2500, i50a: 680, i50b: 300, maxH: 0.5, leafW: 7,  earLen: 10, color: '#66bb6a', earColor: '#8d6e63', groundY: 0.82 },
+        rice:    { name: '水稻', tbase: 9,  topt: 26, tsum: 2300, i50a: 850, i50b: 200, maxH: 0.65,leafW: 5,  earLen: 16, color: '#43a047', earColor: '#c9b458', groundY: 0.82 },
+    };
+
+    // ===== 模拟状态 =====
+    let state = {
+        crop: 'wheat',
+        tt: 0,           // 当前积温
+        day: 0,           // 模拟天数
+        biomass: 0,       // 生物量
+        playing: true,
+        speed: 1.0,
+        light: 0.8,
+        water: 0.7,
+        wind: 0.3,
+        time: 0,          // 动画时间（秒）
+    };
+
+    // 生长阶段判定
+    function getStage(crop, tt) {
+        const p = cropDefs[crop];
+        const ratio = tt / p.tsum;
+        if (ratio < 0.05)  return { name: '发芽期',  index: 0 };
+        if (ratio < 0.25)  return { name: '苗期',    index: 1 };
+        if (ratio < 0.50)  return { name: '营养生长', index: 2 };
+        if (ratio < 0.70)  return { name: '开花期',  index: 3 };
+        if (ratio < 0.90)  return { name: '灌浆期',  index: 4 };
+        if (ratio <= 1.05) return { name: '成熟期',  index: 5 };
+        return { name: '完熟', index: 6 };
+    }
+
+    // ===== 控件绑定 =====
+    const elCrop   = document.getElementById('cropSelect');
+    const elPlay   = document.getElementById('btnPlay');
+    const elReset  = document.getElementById('btnReset');
+    const elSpeed  = document.getElementById('speedSlider');
+    const elLight  = document.getElementById('lightSlider');
+    const elWater  = document.getElementById('waterSlider');
+    const elWind   = document.getElementById('windSlider');
+    const elSpeedV = document.getElementById('speedVal');
+    const elLightV = document.getElementById('lightVal');
+    const elWaterV = document.getElementById('waterVal');
+    const elWindV  = document.getElementById('windVal');
+
+    elCrop.addEventListener('change', () => { state.crop = elCrop.value; state.tt = 0; state.day = 0; state.biomass = 0; });
+    elPlay.addEventListener('click', () => {
+        state.playing = !state.playing;
+        elPlay.textContent = state.playing ? '⏸ 暂停' : '▶ 播放';
+    });
+    elReset.addEventListener('click', () => { state.tt = 0; state.day = 0; state.biomass = 0; });
+    elSpeed.addEventListener('input', () => { state.speed = parseFloat(elSpeed.value); elSpeedV.textContent = state.speed.toFixed(1) + 'x'; });
+    elLight.addEventListener('input', () => { state.light = parseFloat(elLight.value); elLightV.textContent = state.light.toFixed(2); });
+    elWater.addEventListener('input', () => { state.water = parseFloat(elWater.value); elWaterV.textContent = state.water.toFixed(2); });
+    elWind.addEventListener('input',  () => { state.wind  = parseFloat(elWind.value);  elWindV.textContent  = state.wind.toFixed(2); });
+
+    // ===== 简易随机（确定性，基于种子） =====
+    function seededRand(seed) {
+        let s = seed;
+        return function() { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+    }
+
+    // ===== 绘制天空 =====
+    function drawSky(light) {
+        // 根据光照强度从深夜蓝到天蓝渐变
+        const topR = Math.round(10  + light * 100);
+        const topG = Math.round(15  + light * 160);
+        const topB = Math.round(50  + light * 200);
+        const botR = Math.round(60  + light * 170);
+        const botG = Math.round(100 + light * 150);
+        const botB = Math.round(150 + light * 100);
+
+        const grad = ctx.createLinearGradient(0, 0, 0, H * 0.82);
+        grad.addColorStop(0, `rgb(${topR},${topG},${topB})`);
+        grad.addColorStop(1, `rgb(${botR},${botG},${botB})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H * 0.82);
+
+        // 太阳
+        if (light > 0.4) {
+            const sunX = W * 0.15 + light * W * 0.15;
+            const sunY = H * 0.12 + (1 - light) * H * 0.15;
+            const sunR = 25 + light * 15;
+            const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 2.5);
+            sunGrad.addColorStop(0, `rgba(255,245,157,${light * 0.9})`);
+            sunGrad.addColorStop(0.4, `rgba(255,235,59,${light * 0.3})`);
+            sunGrad.addColorStop(1, 'rgba(255,235,59,0)');
+            ctx.fillStyle = sunGrad;
+            ctx.fillRect(sunX - sunR * 3, sunY - sunR * 3, sunR * 6, sunR * 6);
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,253,208,${light})`;
+            ctx.fill();
+        }
+    }
+
+    // ===== 绘制地面 =====
+    function drawGround(crop, water) {
+        const gY = H * cropDefs[crop].groundY;
+        // 土壤颜色受水分影响：越湿越深
+        const soilR = Math.round(140 - water * 50);
+        const soilG = Math.round(110 - water * 40);
+        const soilB = Math.round(70  - water * 30);
+        const grad = ctx.createLinearGradient(0, gY, 0, H);
+        grad.addColorStop(0, `rgb(${soilR},${soilG},${soilB})`);
+        grad.addColorStop(0.3, `rgb(${soilR - 20},${soilG - 15},${soilB - 10})`);
+        grad.addColorStop(1, `rgb(${soilR - 40},${soilG - 30},${soilB - 15})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, gY, W, H - gY);
+
+        // 水分指示：水分高时画水面反光
+        if (crop === 'rice' && water > 0.5) {
+            ctx.fillStyle = `rgba(100,181,246,${(water - 0.5) * 0.4})`;
+            ctx.fillRect(0, gY, W, 4);
+        }
+
+        // 地表线
+        ctx.strokeStyle = `rgb(${soilR + 20},${soilG + 15},${soilB + 10})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, gY);
+        ctx.lineTo(W, gY);
+        ctx.stroke();
+    }
+
+    // ===== 绘制单株作物 =====
+    function drawPlant(x, crop, growthRatio, stageIdx, windOffset, seed) {
+        const p = cropDefs[crop];
+        const gY = H * p.groundY;
+        const rand = seededRand(seed);
+
+        // 最大株高（像素）
+        const maxH = H * p.maxH * 0.45;
+        // 当前高度：从0增长到maxH，成熟后不再增长
+        const heightGrowth = Math.min(growthRatio / 0.7, 1);
+        const h = maxH * heightGrowth;
+        if (h < 2) return; // 太小不画
+
+        // 茎的摇摆角度（风力 + 自然微动）
+        const swayAngle = windOffset * 0.12 + Math.sin(state.time * 1.5 + seed) * 0.02 * (1 + state.wind);
+
+        // 茎颜色随成熟度变化：绿色 → 黄绿 → 枯黄
+        let stemColor;
+        if (growthRatio < 0.85) {
+            stemColor = p.color;
+        } else {
+            // 逐步变黄
+            const fadeR = (growthRatio - 0.85) / 0.20;
+            stemColor = lerpColor(p.color, '#c8b84d', Math.min(fadeR, 1));
+        }
+
+        ctx.save();
+        ctx.translate(x, gY);
+        ctx.rotate(swayAngle);
+
+        // ----- 茎 -----
+        ctx.strokeStyle = stemColor;
+        ctx.lineWidth = Math.max(1.5, 3 + (growthRatio > 0.5 ? 1 : 0));
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -h);
+        ctx.stroke();
+
+        // ----- 叶片 -----
+        // 叶片数量和大小随生长阶段变化
+        const leafCount = Math.floor(Math.min(growthRatio * 8, 5));
+        for (let i = 0; i < leafCount; i++) {
+            const leafY = -h * (0.25 + i * 0.15);
+            const side = (i % 2 === 0) ? 1 : -1;
+            const leafLen = (15 + rand() * 15) * Math.min(growthRatio * 2, 1) * (1 - i * 0.08);
+            const leafW = p.leafW * Math.min(growthRatio * 1.5, 1);
+
+            // 叶片受风偏转
+            const leafSway = windOffset * 0.15 * (1 + i * 0.2) + Math.sin(state.time * 2 + i * 1.3 + seed) * 0.03;
+
+            // 叶片颜色
+            let leafColor;
+            if (growthRatio < 0.85) {
+                leafColor = p.color;
+            } else {
+                const fadeR = (growthRatio - 0.85) / 0.20;
+                leafColor = lerpColor(p.color, '#b8a830', Math.min(fadeR, 1));
+            }
+
+            ctx.save();
+            ctx.translate(0, leafY);
+            ctx.rotate(leafSway);
+
+            // 画叶片（贝塞尔曲线）
+            ctx.fillStyle = leafColor;
+            ctx.globalAlpha = 0.85;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(side * leafLen * 0.5, -leafW * 0.6, side * leafLen, -leafW * 0.15);
+            ctx.quadraticCurveTo(side * leafLen * 0.5, leafW * 0.3, 0, 0);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+        }
+
+        // ----- 穗 / 果实（开花期后出现） -----
+        if (stageIdx >= 3) {
+            const earProgress = Math.min((growthRatio - 0.55) / 0.25, 1);
+            const earH = p.earLen * earProgress;
+
+            // 穗颜色
+            let earColor = p.earColor;
+            if (stageIdx >= 5) {
+                // 成熟期穗变深
+                const matureFade = Math.min((growthRatio - 0.85) / 0.15, 1);
+                earColor = lerpColor(p.earColor, '#8d6e63', matureFade * 0.5);
+            }
+
+            if (crop === 'wheat') {
+                // 小麦穗：椭圆形 + 芒
+                ctx.save();
+                ctx.translate(0, -h);
+                ctx.fillStyle = earColor;
+                ctx.beginPath();
+                ctx.ellipse(0, -earH * 0.5, 3.5, earH * 0.55, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // 芒
+                if (earProgress > 0.5) {
+                    ctx.strokeStyle = earColor;
+                    ctx.lineWidth = 0.8;
+                    for (let a = -2; a <= 2; a++) {
+                        ctx.beginPath();
+                        ctx.moveTo(a * 1.2, -earH + 2);
+                        ctx.lineTo(a * 3, -earH - 8 - rand() * 5);
+                        ctx.stroke();
+                    }
+                }
+                ctx.restore();
+            } else if (crop === 'maize') {
+                // 玉米穗：侧生的棒状
+                ctx.save();
+                ctx.translate(2, -h * 0.55);
+                ctx.rotate(0.3 + windOffset * 0.05);
+                const earW = 7 * earProgress;
+                ctx.fillStyle = earColor;
+                ctx.beginPath();
+                ctx.roundRect(-earW * 0.3, -earH * 0.3, earW, earH * 0.8, 3);
+                ctx.fill();
+                // 玉米须
+                ctx.strokeStyle = '#a1887f';
+                ctx.lineWidth = 0.6;
+                for (let s = 0; s < 4; s++) {
+                    ctx.beginPath();
+                    ctx.moveTo(earW * 0.2 + s * 1.5, -earH * 0.3);
+                    ctx.lineTo(earW * 0.5 + s * 2, -earH * 0.3 - 6 - rand() * 4);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            } else if (crop === 'soybean') {
+                // 大豆豆荚
+                ctx.save();
+                ctx.translate(0, -h * 0.65);
+                ctx.fillStyle = earColor;
+                for (let pod = 0; pod < 3; pod++) {
+                    const px = (pod - 1) * 8;
+                    const py = pod * 5;
+                    const podLen = 7 * earProgress;
+                    ctx.beginPath();
+                    ctx.ellipse(px, py, podLen, 3, 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            } else if (crop === 'rice') {
+                // 水稻穗：弧形下垂
+                ctx.save();
+                ctx.translate(0, -h);
+                ctx.strokeStyle = earColor;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                const droopAngle = 0.3 + earProgress * 0.4;
+                ctx.quadraticCurveTo(8, -earH * 0.3, 12, earH * 0.1);
+                ctx.stroke();
+                // 谷粒
+                ctx.fillStyle = earColor;
+                for (let g = 0; g < 6 * earProgress; g++) {
+                    const gt = g / 6;
+                    const gx = gt * 12;
+                    const gy = gt * gt * earH * 0.1;
+                    ctx.beginPath();
+                    ctx.ellipse(gx, gy, 2, 2.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // ----- 花朵（开花期） -----
+        if (stageIdx === 3) {
+            ctx.save();
+            ctx.translate(0, -h);
+            const flowerAlpha = 0.7 + Math.sin(state.time * 3 + seed) * 0.2;
+            ctx.globalAlpha = flowerAlpha;
+            if (crop === 'soybean') {
+                // 大豆花：淡紫色小花
+                ctx.fillStyle = '#ce93d8';
+                for (let p = 0; p < 5; p++) {
+                    const angle = (p / 5) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.ellipse(Math.cos(angle) * 3, Math.sin(angle) * 3 - 2, 2.5, 1.5, angle, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#fff176';
+                ctx.beginPath();
+                ctx.arc(0, -2, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (crop === 'rice') {
+                // 水稻花：淡黄小花
+                ctx.fillStyle = '#fff9c4';
+                for (let p = 0; p < 4; p++) {
+                    ctx.beginPath();
+                    ctx.arc((p - 1.5) * 2.5, -3 + (p % 2) * 2, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                // 小麦/玉米花：不明显，用小点表示
+                ctx.fillStyle = crop === 'wheat' ? '#fff9c4' : '#f3e5f5';
+                ctx.beginPath();
+                ctx.arc(0, -3, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    // ===== 颜色插值工具 =====
+    function lerpColor(c1, c2, t) {
+        const r1 = parseInt(c1.slice(1,3), 16), g1 = parseInt(c1.slice(3,5), 16), b1 = parseInt(c1.slice(5,7), 16);
+        const r2 = parseInt(c2.slice(1,3), 16), g2 = parseInt(c2.slice(3,5), 16), b2 = parseInt(c2.slice(5,7), 16);
+        const r = Math.round(r1 + (r2 - r1) * t);
+        const g = Math.round(g1 + (g2 - g1) * t);
+        const b = Math.round(b1 + (b2 - b1) * t);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    // ===== 绘制风效果（飘散的粒子） =====
+    function drawWindParticles() {
+        if (state.wind < 0.15) return;
+        const count = Math.floor(state.wind * 15);
+        ctx.globalAlpha = state.wind * 0.5;
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 0.8;
+        for (let i = 0; i < count; i++) {
+            const seed = i * 137.5;
+            const baseX = ((state.time * (80 + seed % 50) * state.wind + seed * 73) % (W + 200)) - 100;
+            const baseY = 30 + (seed * 31 % (H * 0.6));
+            const len = 20 + state.wind * 40;
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY);
+            ctx.lineTo(baseX + len, baseY - 2 + Math.sin(state.time * 2 + i) * 3);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // ===== 绘制云 =====
+    function drawClouds(light) {
+        if (light < 0.3) return; // 太暗不画云
+        const alpha = (1 - light) * 0.5 + 0.1;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#eceff1';
+        // 两朵云，位置随时间缓慢移动
+        const cx1 = ((state.time * 8) % (W + 200)) - 100;
+        const cx2 = ((state.time * 5 + 300) % (W + 200)) - 100;
+        drawCloud(cx1, H * 0.1, 50);
+        drawCloud(cx2, H * 0.18, 35);
+        ctx.globalAlpha = 1;
+    }
+
+    function drawCloud(cx, cy, size) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, size * 0.4, 0, Math.PI * 2);
+        ctx.arc(cx + size * 0.3, cy - size * 0.15, size * 0.35, 0, Math.PI * 2);
+        ctx.arc(cx + size * 0.6, cy, size * 0.3, 0, Math.PI * 2);
+        ctx.arc(cx - size * 0.25, cy + size * 0.05, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // ===== 绘制雨滴 =====
+    function drawRain() {
+        const waterNeed = 1 - state.water;
+        if (waterNeed < 0.5) return; // 水分充足不下雨
+        const intensity = (waterNeed - 0.5) * 2; // 0~1
+        const count = Math.floor(intensity * 80);
+        ctx.strokeStyle = `rgba(100,181,246,${intensity * 0.4})`;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < count; i++) {
+            const seed = i * 97.3;
+            const rx = (seed * 43 + state.time * 30) % W;
+            const ry = (seed * 17 + state.time * 200 * (0.8 + (seed % 50) / 50)) % H;
+            ctx.beginPath();
+            ctx.moveTo(rx, ry);
+            ctx.lineTo(rx - 2, ry + 8 + intensity * 6);
+            ctx.stroke();
+        }
+    }
+
+    // ===== 绘制进度条 =====
+    function drawProgressBar(crop, growthRatio) {
+        const p = cropDefs[crop];
+        const barW = W * 0.6;
+        const barH = 6;
+        const barX = (W - barW) / 2;
+        const barY = 12;
+
+        // 底色
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW, barH, 3);
+        ctx.fill();
+
+        // 进度
+        const progress = Math.min(growthRatio, 1);
+        const grad = ctx.createLinearGradient(barX, 0, barX + barW * progress, 0);
+        grad.addColorStop(0, '#66bb6a');
+        grad.addColorStop(1, progress > 0.9 ? '#fdd835' : '#43a047');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW * progress, barH, 3);
+        ctx.fill();
+
+        // 阶段标记
+        const stages = [0.05, 0.25, 0.50, 0.70, 0.90];
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        stages.forEach(s => {
+            ctx.beginPath();
+            ctx.arc(barX + barW * s, barY + barH / 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 标签
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.font = '11px "Noto Sans SC", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${p.name} · TT ${Math.round(state.tt)} / ${p.tsum} °C·d`, W / 2, barY + barH + 14);
+    }
+
+    // ===== 主动画循环 =====
+    let lastTime = 0;
+
+    function animate(timestamp) {
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.1); // 秒，限制最大步长
+        lastTime = timestamp;
+
+        if (state.playing) {
+            state.time += dt;
+
+            // 模拟生长
+            const p = cropDefs[state.crop];
+            // 环境因子影响积温累积速率
+            const tmean = p.topt * state.light * 0.8 + p.tbase * 0.2; // 简化的日均温
+            const fTemp = tmean >= p.topt ? 1 : Math.max((tmean - p.tbase) / (p.topt - p.tbase), 0);
+            const fWater = Math.max(0, 1 - (1 - state.water) * 1.2); // water 越低越胁迫
+            const growthRate = fTemp * fWater * state.light; // 综合生长速率
+
+            const dTT = Math.max(tmean - p.tbase, 0) * state.speed * dt * 3 * state.light;
+            state.tt += dTT;
+            state.day += dt * state.speed * 1.5;
+            state.biomass = Math.max(0, state.biomass + growthRate * state.speed * dt * 50);
+        }
+
+        const p = cropDefs[state.crop];
+        const growthRatio = state.tt / p.tsum;
+        const stage = getStage(state.crop, state.tt);
+
+        // 风的偏移量（正弦叠加模拟自然风）
+        const windOffset = Math.sin(state.time * 1.2) * state.wind * 0.5
+                         + Math.sin(state.time * 2.7) * state.wind * 0.3
+                         + Math.sin(state.time * 0.4) * state.wind * 0.2;
+
+        // ===== 清屏并绘制 =====
+        ctx.clearRect(0, 0, W, H);
+
+        drawSky(state.light);
+        drawClouds(state.light);
+        drawRain();
+        drawWindParticles();
+        drawGround(state.crop, state.water);
+
+        // 绘制作物群（7株，间距均匀）
+        const plantCount = 7;
+        const margin = W * 0.1;
+        const spacing = (W - 2 * margin) / (plantCount - 1);
+        for (let i = 0; i < plantCount; i++) {
+            const px = margin + i * spacing + (seededRand(i * 77)() - 0.5) * spacing * 0.2;
+            // 每株的生长有微小差异
+            const growthVar = growthRatio * (0.9 + seededRand(i * 33)() * 0.2);
+            drawPlant(px, state.crop, growthVar, stage.index, windOffset, i * 137);
+        }
+
+        drawProgressBar(state.crop, growthRatio);
+
+        // ===== 更新 UI 标签 =====
+        document.getElementById('stageLabel').textContent = stage.name;
+        document.getElementById('ttLabel').textContent = Math.round(state.tt) + ' °C·d';
+        document.getElementById('dayLabel').textContent = Math.round(state.day) + ' 天';
+        document.getElementById('bioLabel').textContent = Math.round(state.biomass) + ' kg/ha';
+
+        // 成熟后自动停止
+        if (growthRatio > 1.08 && state.playing) {
+            state.playing = false;
+            elPlay.textContent = '▶ 播放';
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    // 启动动画
+    requestAnimationFrame(animate);
+})();
+</script>
+
+</body>
+</html>

@@ -348,8 +348,8 @@ def simple_crop_model(para, weather, arid_data):
     result["Yield"] = np.zeros(stop_day)
 
     # initialize light interception parameters
-    result["I50A"] = np.full(stop_day, i50a)
-    result["I50B"] = np.full(stop_day, i50b)
+    result["I50A"] = np.full(stop_day, float(i50a))
+    result["I50B"] = np.full(stop_day, float(i50b))
 
     # water stress effect on light interception
     f_solar_water = result["F_Water"].copy()
